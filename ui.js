@@ -1,4 +1,4 @@
-import { state, isObservable, transform } from "./mvc.js"
+import {state, transform, each} from "./mvc.js"
 import { div, input, ul, li } from "./html.js"
 
 /**
@@ -40,9 +40,6 @@ export function autocomplete(model, options, labelFn = item => item) {
     const open   = state(false)
     const active = state(-1)
 
-    // Sync input text from model (e.g. if model is reset externally)
-    const displayValue = transform(model, v => v != null ? labelFn(v) : "")
-
     function commit(item) {
         model.set(item)
         open.set(false)
@@ -55,9 +52,7 @@ export function autocomplete(model, options, labelFn = item => item) {
         active.set((active.get() + delta + list.length) % list.length)
     }
 
-    const inputEl = input(displayValue)
-        .placeholder("Type to search…")
-        .autocomplete("off")
+    const inputEl = input(model).placeholder("Type to search…").autocomplete("off")
         .class("rx-ac-input")
         .onInput(el => {
             model.set(el.get().value)
@@ -66,40 +61,32 @@ export function autocomplete(model, options, labelFn = item => item) {
         })
         .onKeyDown((el, e) => {
             switch (e.key) {
-                case "ArrowDown": moveActive(1);  e.preventDefault(); break
-                case "ArrowUp":   moveActive(-1); e.preventDefault(); break
+                case "ArrowDown": moveActive(1); break
+                case "ArrowUp":   moveActive(-1); break
                 case "Enter": {
                     const item = (options.get() ?? [])[active.get()]
-                    if (item != null) { commit(item); e.preventDefault() }
+                    if (item != null) { commit(item); }
                     else open.set(false)
                     break
                 }
                 case "Escape": open.set(false); active.set(-1); break
             }
-        }, false)
-        .on("focus", () => open.set(true),  false)
-        .on("blur",  () => setTimeout(() => open.set(false), 150), false)
+        })
+        .onFocus(() => open.set(true))
+        .onBlur(() => setTimeout(() => open.set(false), 150))
 
-    const dropdown = ul().class("rx-ac-dropdown")
+    const dropdown = ul(each(
+        options,
+        (item, index) => li(labelFn(item)).class("rx-ac-item").backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null)).onClick(() => commit(item.get()))
+    )).class("rx-ac-dropdown")
 
     // Re-render list whenever options change
     options.observe(list => {
-        dropdown.clear()
-        ;(list ?? []).forEach((item, index) => {
-            const isActive = transform(active, i => i === index)
-            dropdown.add(
-                li(labelFn(item))
-                    .class("rx-ac-item")
-                    .display(transform(isActive, v => v ? null : null)) // always visible
-                    .setProperty("style", transform(isActive, v => v ? "background:#f0f4ff" : ""))
-                    .onClick(() => commit(item))
-            )
-        })
         active.set(-1)
         open.set((list ?? []).length > 0)
     })
 
-    return div(inputEl, div(dropdown).display(open))
+    return div(inputEl, dropdown.display(open))
         .class("rx-ac-wrap")
 }
 

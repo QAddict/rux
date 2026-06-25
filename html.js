@@ -480,6 +480,14 @@ export class HtmlBuilder extends ElementBuilder {
         return this.on('keyup', handler, preventDefault)
     }
 
+    onFocus(handler, preventDefault = false) {
+        return this.on('focus', handler, preventDefault)
+    }
+
+    onBlur(handler, preventDefault = false) {
+        return this.on('blur', handler, preventDefault)
+    }
+
     onLoad(handler, preventDefault = false) {
         return this.on('load', handler, preventDefault)
     }

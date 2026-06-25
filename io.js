@@ -1,7 +1,8 @@
-import { state, stateModel, isObservable } from "./mvc.js"
+import {state, stateModel, isObservable, Triggerable} from "./mvc.js"
 
-export class Remote {
+export class Remote extends Triggerable {
     constructor(url, output = state()) {
+        super()
         this.url     = stateModel(url)
         this.headers = state({})
         this.output  = output

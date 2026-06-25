@@ -25,11 +25,26 @@
  */
 
 /**
+ * Represents an observable entity that allows triggering of registered listeners manually,
+ * regardless of whether the underlying value has changed.
+ */
+export class Triggerable {
+
+    /**
+     * Explicitly trigger registered listeners, even if the wrapped value didn't change.
+     * @returns {this} this observable.
+     */
+    trigger() {
+        throw new Error("Undeclared method trigger()")
+    }
+}
+
+/**
  * Interface Observable
  * Defines API to register listeners, which will be invoked on any change of the value held / wrapped by the observer
  * implementation.
  */
-export class Observable {
+export class Observable extends Triggerable {
 
     /**
      * Constructor allows initial setup of name.
@@ -37,6 +52,7 @@ export class Observable {
      *             regardless of the current value.
      */
     constructor(name = "") {
+        super();
         this.setName(name)
     }
 
@@ -102,14 +118,6 @@ export class Observable {
      */
     update(aFunction) {
         return this.set(aFunction(this.get()))
-    }
-
-    /**
-     * Explicitly trigger registered listeners, even if the wrapped value didn't change.
-     * @returns {Observable} this observable.
-     */
-    trigger() {
-        throw new Error("Undeclared method trigger()")
     }
 }
 
@@ -725,7 +733,7 @@ function fullReplace(start, end, itemFunction) {
         while(s.nextSibling && s.nextSibling !== e) s.nextSibling.parentNode.removeChild(s.nextSibling)
         let v = (n === null ? [] : Array.isArray(n) ? n : [n])
         let f = document.createDocumentFragment()
-        v.forEach(i => f.appendChild(node(itemFunction(state(i)))))
+        v.forEach((i, p) => f.appendChild(node(itemFunction(state(i), p))))
         e.parentNode.insertBefore(f, e)
     }
 }
@@ -734,13 +742,13 @@ function reconcile(start, end, itemFunction, keyFunction) {
     let cache = new Map()
     return n => {
         let v = (n === null ? [] : Array.isArray(n) ? n : [n])
-            .map(i => {
+            .map((i, p) => {
                 let key = keyFunction(i)
                 if(cache.has(key)) {
                     cache.get(key).state.set(i)
                 } else {
                     let s = state(i)
-                    cache.set(key, {state: s, node: itemFunction(s).get()})
+                    cache.set(key, {state: s, node: itemFunction(s, p).get()})
                 }
                 return cache.get(key).node
             })
