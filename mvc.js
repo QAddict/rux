@@ -31,7 +31,7 @@ export function requireNonNull(value, message = "Value must not be null") {
 }
 
 export function requireFunction(value, message = "Value") {
-    if(!(value instanceof Function))
+    if(!(typeof value === 'function' || value instanceof Function))
         throw new Error(message + " must be function, but was " + value)
     return value
 }
@@ -182,6 +182,7 @@ export class ObservableTransformer extends Observable {
     }
 
     observe(observer) {
+        requireFunction(observer, name + " observer");
         this.__parent.observe(value => observer(this.__transform(value)));
         return this
     }
@@ -214,6 +215,7 @@ export class AttachedModel extends Observable {
     }
 
     observeChanges(observer) {
+        requireFunction(observer, name + "observer");
         this._observers.push(observer);
         return this
     }

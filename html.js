@@ -68,8 +68,8 @@ export class HtmlBuilder extends ElementBuilder {
         return this.set('type', ...value)
     }
 
-    readonly(...value) {
-        return this.set('readonly', ...value)
+    readonly(value) {
+        return this.set('readonly', transform(value, to(true)))
     }
 
     placeholder(...value) {
@@ -133,7 +133,7 @@ export class HtmlBuilder extends ElementBuilder {
     }
 
     selected(value) {
-        return this.set('selected', value)
+        return this.set('selected', transform(value, to(true)))
     }
 
     contenteditable(value) {
@@ -161,7 +161,7 @@ export class HtmlBuilder extends ElementBuilder {
     }
 
     display(value) {
-        return this.css('display', isObservable(value) ? transform(value, v => v === false ? 'none' : v === true ? null : v) : value)
+        return this.css('display', transform(value, v => v === false ? 'none' : v === true ? null : v))
     }
 
     textAlign(value) {
