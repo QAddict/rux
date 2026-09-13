@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import {ElementBuilder, isObservable, transform, set, stateModel, to} from "./mvc.js";
+import {ElementBuilder, isObservable, transform, set, stateModel, to, addItemToArray} from "./mvc.js";
 
 let modelChannels = new Map()
 
@@ -125,7 +125,7 @@ export class HtmlBuilder extends ElementBuilder {
     }
 
     disabled(value) {
-        return this.set('disabled', isObservable(value) ? transform(value, to(true)) : value)
+        return this.set('disabled', transform(value, to(true)))
     }
 
     content(...value) {
@@ -192,6 +192,14 @@ export class HtmlBuilder extends ElementBuilder {
         return this.css('height', ...args)
     }
 
+    maxWidth(...args) {
+        return this.css('max-width', ...args)
+    }
+
+    maxHeight(...args) {
+        return this.css('max-height', ...args)
+    }
+
     top(...args) {
         return this.css('top', ...args)
     }
@@ -222,6 +230,10 @@ export class HtmlBuilder extends ElementBuilder {
 
     color(value) {
         return this.css('color', value)
+    }
+
+    font(...args) {
+        return this.css('font', ...args)
     }
 
     fontSize(...args) {
@@ -428,6 +440,18 @@ export class HtmlBuilder extends ElementBuilder {
         return this.boxSizing('border-box')
     }
 
+    boxShadow(...args) {
+        return this.css('box-shadow', ...args)
+    }
+
+    listStyle(...args) {
+        return this.css('list-style', ...args)
+    }
+
+    zIndex(...args) {
+        return this.css('z-index', ...args)
+    }
+
     value(...args) {
         return this.setProperty('value', ...args)
     }
@@ -544,7 +568,7 @@ export class HtmlBuilder extends ElementBuilder {
     }
 
     dropTo(target) {
-        return this.receive(channelOf(target), item => target.update(a => a.push(item)))
+        return this.receive(channelOf(target), item => target.update(addItemToArray(item)))
     }
 
     /*

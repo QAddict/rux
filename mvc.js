@@ -24,6 +24,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+export function requireNonNull(value, message = "Value must not be null") {
+    if (value == null)
+        throw new Error(message)
+    return value
+}
+
+export function requireFunction(value, message = "Value") {
+    if(!(value instanceof Function))
+        throw new Error(message + " must be function, but was " + value)
+    return value
+}
+
 /**
  * Represents an observable entity that allows triggering of registered listeners manually,
  * regardless of whether the underlying value has changed.
@@ -137,7 +149,7 @@ export class StateModel extends Observable {
     }
 
     observeChanges(observer) {
-        this._observers.push(observer);
+        this._observers.push(requireFunction(observer, "Observer"));
         return this
     }
 
@@ -160,6 +172,7 @@ export class StateModel extends Observable {
 export class ObservableTransformer extends Observable {
     constructor(parent, transform, name = "") {
         super(name);
+        requireFunction(transform, name + " transformer")
         this.__parent = parent;
         this.__transform = transform
     }
@@ -489,6 +502,12 @@ export class Content {
     }
 }
 
+function toString(value) {
+    if (value == null) return ""
+    if (typeof value === 'object') return JSON.stringify(value)
+    return value.toString()
+}
+
 /**
  * Create a DOM TextNode, whose content displays value of an observable. It means, that the displayed content will
  * get updated whenever the observable value changes. You can think of it as a placeholder for observable value.
@@ -499,9 +518,12 @@ export class Content {
  * @returns {*} Text node.
  */
 function observableTextNode(observable) {
-    let n = document.createTextNode(observable.get())
-    observable.observe(value => n.nodeValue = value, false)
-    return n
+    if(isObservable(observable)) {
+        let n = document.createTextNode(toString(observable.get()))
+        observable.observe(value => n.nodeValue = toString(value), false)
+        return n
+    }
+    return document.createTextNode(toString(observable))
 }
 
 /**
@@ -652,6 +674,7 @@ export class ElementBuilder extends FragmentBuilder {
      * @returns {ElementBuilder} - Returns the current instance of the ElementBuilder.
      */
     on(event, handler, preventDefault = true) {
+        requireFunction(handler, event + " handler")
         this.get().addEventListener(event, preventDefault ? e => {
             handler(this, e);
             e.preventDefault();
@@ -703,11 +726,15 @@ export function content(node) {
 }
 
 export function node(value) {
-    return (value instanceof Content) ? value.get() : (value instanceof Node) ? value : isObservable(value) ? observableTextNode(value) : document.createTextNode(value)
+    return (value instanceof Content)
+        ? value.get()
+        : (value instanceof Node)
+            ? value
+            : observableTextNode(value)
 }
 
 export function text(value = '') {
-    return content(isObservable(value) ? observableTextNode(value) : document.createTextNode(value))
+    return content(observableTextNode(value))
 }
 
 export function fragment(...content) {
@@ -788,8 +815,12 @@ export function update(model, withFunction) {
     return () => model.update(withFunction)
 }
 
+export function addItemToArray(item) {
+    return value => Array.isArray(value) ? [...value, item] : [item]
+}
+
 export function addTo(arrayModel, item) {
-    return update(arrayModel, a => a.push(item))
+    return update(arrayModel, addItemToArray(item))
 }
 
 /**

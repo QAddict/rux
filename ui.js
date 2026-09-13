@@ -52,8 +52,7 @@ export function autocomplete(model, options, labelFn = item => item) {
         active.set((active.get() + delta + list.length) % list.length)
     }
 
-    const inputEl = input(model).placeholder("Type to search…").autocomplete("off")
-        .class("rx-ac-input")
+    const inputEl = input(model).placeholder("Type to search…").autocomplete("off").width('100%')
         .onInput(el => {
             model.set(el.get().value)
             open.set(true)
@@ -75,34 +74,21 @@ export function autocomplete(model, options, labelFn = item => item) {
         .onFocus(() => open.set(true))
         .onBlur(() => setTimeout(() => open.set(false), 150))
 
-    const dropdown = ul(each(
-        options,
-        (item, index) => li(labelFn(item)).class("rx-ac-item").backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null)).onClick(() => commit(item.get()))
-    )).class("rx-ac-dropdown")
-
     // Re-render list whenever options change
     options.observe(list => {
         active.set(-1)
         open.set((list ?? []).length > 0)
     })
 
-    return div(inputEl, dropdown.display(open))
-        .class("rx-ac-wrap")
+    return div(
+        inputEl.borderBox().padding('4px 8px').border('1px solid #ccc').borderRadius("3px").font('inherit'),
+        ul(each(
+            options,
+            (item, index) => li(labelFn(item)).cursor('pointer').padding('6px 10px').class("rx-ac-item").backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null)).onClick(() => commit(item.get()))
+        ))
+            .position('absolute').top('100%').left(0).right(0).margin('2px 0 0').padding(0).zIndex(999).maxHeight('10em').overflowY('auto')
+            .boxShadow('0 4px 12px rgba(0,0,0,.12)').border('1px solid #ccc').borderRadius('3px').backgroundColor('white')
+            .listStyle('none')
+            .display(open)
+    ).position("relative").display("inline-block")
 }
-
-/**
- * Minimal default styles.
- * Apply with: document.adoptedStyleSheets = [...document.adoptedStyleSheets, autocompleteStyles]
- */
-export const autocompleteStyles = new CSSStyleSheet()
-autocompleteStyles.replaceSync(`
-.rx-ac-wrap       { position: relative; display: inline-block; }
-.rx-ac-input      { width: 100%; box-sizing: border-box; padding: 4px 8px;
-                    border: 1px solid #ccc; border-radius: 3px; font: inherit; }
-.rx-ac-dropdown   { position: absolute; top: 100%; left: 0; right: 0; margin: 2px 0 0;
-                    padding: 0; list-style: none; border: 1px solid #ccc; border-radius: 3px;
-                    background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.12);
-                    max-height: 220px; overflow-y: auto; z-index: 999; }
-.rx-ac-item       { padding: 6px 10px; cursor: pointer; }
-.rx-ac-item:hover { background: #f0f4ff; }
-`)
