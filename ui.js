@@ -1,4 +1,4 @@
-import {state, transform, each} from "./mvc.js"
+import {state, transform, each, set} from "./mvc.js"
 import { div, input, ul, li } from "./html.js"
 
 /**
@@ -52,7 +52,7 @@ export function autocomplete(model, options, labelFn = item => item) {
         active.set((active.get() + delta + list.length) % list.length)
     }
 
-    const inputEl = input(model).placeholder("Type to search…").autocomplete("off").width('100%')
+    const inputEl = input().value(model).placeholder("Type to search…").autocomplete("off").width('100%')
         .onInput(el => {
             model.set(el.get().value)
             open.set(true)
@@ -75,10 +75,7 @@ export function autocomplete(model, options, labelFn = item => item) {
         .onBlur(() => setTimeout(() => open.set(false), 150))
 
     // Re-render list whenever options change
-    options.observe(list => {
-        active.set(-1)
-        open.set((list ?? []).length > 0)
-    })
+    options.observe(set(active, -1))
 
     return div(
         inputEl.borderBox().padding('4px 8px').border('1px solid #ccc').borderRadius("3px").font('inherit'),
