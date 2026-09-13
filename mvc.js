@@ -505,7 +505,7 @@ export class Content {
 function toString(value) {
     if (value == null) return ""
     if (typeof value === 'object') return JSON.stringify(value)
-    return value.toString()
+    return "" + value
 }
 
 /**

@@ -35,7 +35,8 @@ body(
         line().x1(10).y1(10).x2(100).y2(100).stroke('blue'),
         circle().cx(55).cy(55).r(40).fill('green')
     ),
-    autocomplete(search, options)
+    autocomplete(search, options),
+    {x:12,y:13}
 )
 
 search.observeChanges(s => options.set(allOptions.filter(m => m.startsWith(s))))
