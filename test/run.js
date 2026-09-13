@@ -94,3 +94,13 @@ function retry(predicate, remaining, resolve, reject) {
         setTimeout(retry, 200, predicate, remaining - 1, resolve, reject)
     }
 }
+
+export function assertThrow(action) {
+    let thrown = false;
+    try {
+        action();
+    } catch {
+        thrown = true;
+    }
+    assertEquals(true, thrown);
+}
