@@ -507,6 +507,7 @@ export class Content {
 function toString(value) {
     if (value == null) return ""
     if (typeof value === 'object') return JSON.stringify(value)
+    if (typeof value === 'function') throw new TypeError('Functions are not allowed but "' + value + '" is a function')
     return "" + value
 }
 
@@ -751,19 +752,21 @@ export function each(model, itemDisplayFunction = item => item, keyFunction = nu
     let start = text()
     let end = text()
     let f = fragment(start, end)
-    model.observe(keyFunction ? reconcile(start, end, itemDisplayFunction, keyFunction) : fullReplace(start, end, itemDisplayFunction))
+    model.observe(keyFunction ? reconcile(start, end, itemDisplayFunction, keyFunction) : fullReplace(start, end, rList(itemDisplayFunction)))
     return f
 }
 
-function fullReplace(start, end, itemFunction) {
+function rList(itemDisplayFunction) {
+    return n => (n === null ? [] : Array.isArray(n) ? n : [n]).map((i, p) => itemDisplayFunction(state(i), p))
+}
+
+function fullReplace(start, end, fragmentItemsFunction) {
     return n => {
         let s = start.get()
         let e = end.get()
-        while(s.nextSibling && s.nextSibling !== e) s.nextSibling.parentNode.removeChild(s.nextSibling)
-        let v = (n === null ? [] : Array.isArray(n) ? n : [n])
-        let f = document.createDocumentFragment()
-        v.forEach((i, p) => f.appendChild(node(itemFunction(state(i), p))))
-        e.parentNode.insertBefore(f, e)
+        while(s.nextSibling && s.nextSibling !== e)
+            s.nextSibling.parentNode.removeChild(s.nextSibling)
+        e.parentNode.insertBefore(fragment(...fragmentItemsFunction(n)).get(), e)
     }
 }
 
@@ -777,7 +780,7 @@ function reconcile(start, end, itemFunction, keyFunction) {
                     cache.get(key).state.set(i)
                 } else {
                     let s = state(i)
-                    cache.set(key, {state: s, node: itemFunction(s, p).get()})
+                    cache.set(key, {state: s, node: node(itemFunction(s, p))})
                 }
                 return cache.get(key).node
             })
@@ -791,7 +794,7 @@ function reconcile(start, end, itemFunction, keyFunction) {
 export function render(model, itemDisplayFunction = item => item, nullDisplayFunction = () => null) {
     let start = text()
     let end = text()
-    model.observe(value => f.set(value == null ? nullDisplayFunction() : itemDisplayFunction(value)))
+    model.observe(fullReplace(start, end, n => n == null ? nullDisplayFunction() : itemDisplayFunction(n)))
     return fragment(start, end)
 }
 

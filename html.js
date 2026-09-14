@@ -564,7 +564,7 @@ export class HtmlBuilder extends ElementBuilder {
     }
 
     dragTo(item, target) {
-        return this.transfer(channelOf(target), data)
+        return this.transfer(channelOf(target), item)
     }
 
     dropTo(target) {

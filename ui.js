@@ -40,9 +40,12 @@ export function autocomplete(model, options, labelFn = item => item) {
     const open   = state(false)
     const active = state(-1)
 
-    function commit(item) {
-        model.set(item)
-        open.set(false)
+    // Re-render list whenever options change
+    options.observe(set(active, -1))
+
+    function setModel(value, isOpen = false) {
+        if(value != null) model.set(value)
+        open.set(isOpen)
         active.set(-1)
     }
 
@@ -52,36 +55,28 @@ export function autocomplete(model, options, labelFn = item => item) {
         active.set((active.get() + delta + list.length) % list.length)
     }
 
-    const inputEl = input().value(model).placeholder("Type to search…").autocomplete("off").width('100%')
-        .onInput(el => {
-            model.set(el.get().value)
-            open.set(true)
-            active.set(-1)
-        })
-        .onKeyDown((el, e) => {
-            switch (e.key) {
-                case "ArrowDown": moveActive(1); break
-                case "ArrowUp":   moveActive(-1); break
-                case "Enter": {
-                    const item = (options.get() ?? [])[active.get()]
-                    if (item != null) { commit(item); }
-                    else open.set(false)
-                    break
-                }
-                case "Escape": open.set(false); active.set(-1); break
-            }
-        })
-        .onFocus(() => open.set(true))
-        .onBlur(() => setTimeout(() => open.set(false), 150))
-
-    // Re-render list whenever options change
-    options.observe(set(active, -1))
-
     return div(
-        inputEl.borderBox().padding('4px 8px').border('1px solid #ccc').borderRadius("3px").font('inherit'),
+        // Input element
+        input(model.getName()).value(model).placeholder("Type to search…").autocomplete("off")
+            .width('100%').borderBox().padding('4px 8px').border('1px solid #ccc').borderRadius("3px").font('inherit')
+            .onInput(el => setModel(el.get().value, true))
+            .onKeyDown((el, e) => {
+                switch (e.key) {
+                    case "ArrowDown": moveActive(1); break
+                    case "ArrowUp":   moveActive(-1); break
+                    case "Enter":  setModel(options.get()[active.get()]); break
+                    case "Escape": setModel(null); break
+                }
+            })
+            .onFocus(set(open, true))
+            .onBlur(() => setTimeout(set(open, false), 150)),
+
+        // Options drop-down
         ul(each(
             options,
-            (item, index) => li(labelFn(item)).cursor('pointer').padding('6px 10px').class("rx-ac-item").backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null)).onClick(() => commit(item.get()))
+            (item, index) => li(labelFn(item))
+                .cursor('pointer').padding('6px 10px').backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null))
+                .onClick(() => setModel(item.get()))
         ))
             .position('absolute').top('100%').left(0).right(0).margin('2px 0 0').padding(0).zIndex(999).maxHeight('10em').overflowY('auto')
             .boxShadow('0 4px 12px rgba(0,0,0,.12)').border('1px solid #ccc').borderRadius('3px').backgroundColor('white')
