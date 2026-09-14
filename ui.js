@@ -1,4 +1,4 @@
-import {isObservable, Observable,state, transform, each, set} from "./mvc.js"
+import { Observable, state, transform, each, set, requireWriteable} from "./mvc.js"
 import { div, button, span, input, ul, li } from "./html.js"
 
 /**
@@ -129,21 +129,20 @@ function safeUrl(value, doc) {
  * Paste accepts plain text; model HTML is restricted to basic formatting tags.
  */
 export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'} = {}) {
-    if (!isObservable(model)) throw new TypeError('richTextEditor: model must be an Observable')
-    if (model.set === Observable.prototype.set) throw new TypeError('richTextEditor: model must be writable')
+    requireWriteable(model)
     const doc = document
     const win = doc.defaultView
-    const editor = div().contenteditable(true).set('role', 'textbox')
+    const editor = div().contenteditable(true).role('textbox')
         .set('aria-label', label).set('aria-multiline', 'true')
-        .set('tabindex', '0').padding('12px').css('min-height', minHeight)
+        .tabindex('0').padding('12px').minHeight(minHeight)
         .css('overflow-wrap', 'anywhere').css('outline-offset', '-2px')
     const area = editor.get()
-    const status = span().set('role', 'status').set('aria-live', 'polite')
-    const toolbar = div().set('role', 'group').set('aria-label', 'Text formatting')
+    const status = span().role('status').set('aria-live', 'polite')
+    const toolbar = div().role('group').set('aria-label', 'Text formatting')
         .display('flex').css('flex-wrap', 'wrap').gap('4px').padding('8px')
         .backgroundColor('#f5f5f5').borderBottom('1px solid #ddd')
     const linkInput = input().type('url').set('aria-label', 'Link URL')
-        .placeholder('https://example.com').css('flex', '1')
+        .placeholder('https://example.com').flex('1')
     const linkPanel = div().display(false).padding('8px').borderBottom('1px solid #ddd')
     let savedRange = null
     let writing = false
@@ -158,6 +157,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
             savedRange = selection.getRangeAt(0).cloneRange()
         }
     }
+
     function restore() {
         area.focus()
         const selection = win.getSelection()
@@ -167,6 +167,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         selection.removeAllRanges()
         selection.addRange(range)
     }
+
     function publish() {
         if (disposed || composing) return
         const html = cleanHtml(area.innerHTML, doc)

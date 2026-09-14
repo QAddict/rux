@@ -277,6 +277,20 @@ export function isObservable(object) {
     return object instanceof Observable
 }
 
+export function isWriteable(object) {
+    return isObservable(object) && object.set !== Observable.prototype.set
+}
+
+export function requireObservable(object, name = object) {
+    if(isObservable(object)) return object
+    throw new TypeError("Expected " + name + " to be an Observable, but it's not")
+}
+
+export function requireWriteable(object, name = object) {
+    if(isWriteable(object)) return object
+    throw new TypeError("Expected " + name + " to be a writeable Observable, but it's not")
+}
+
 /**
  * If the input is an observable, then it creates observable transformer. Otherwise, it directly transforms the value
  * and returns result.

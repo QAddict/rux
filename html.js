@@ -160,6 +160,14 @@ export class HtmlBuilder extends ElementBuilder {
         return this.set('step', ...value)
     }
 
+    tabindex(...args) {
+        return this.set('tabindex', ...args)
+    }
+
+    role(...args) {
+        return this.set('role', ...args)
+    }
+
     display(value) {
         return this.css('display', transform(value, v => v === false ? 'none' : v === true ? null : v))
     }
@@ -196,8 +204,16 @@ export class HtmlBuilder extends ElementBuilder {
         return this.css('max-width', ...args)
     }
 
+    minWidth(...args) {
+        return this.css('min-width', ...args)
+    }
+
     maxHeight(...args) {
         return this.css('max-height', ...args)
+    }
+
+    minHeight(...args) {
+        return this.css('min-height', ...args)
     }
 
     top(...args) {
