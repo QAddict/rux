@@ -1,15 +1,16 @@
-import {body, br, button, h1, p, table, tbody, td, th, tr} from "../html.js";
+import {body, br, button, h1, p, pre, table, tbody, td, th, tr} from "../html.js";
 import {circle, line, rect, svg} from "../svg.js";
 import {each, set, state} from "../mvc.js";
 import {bind, get} from "../io.js";
 import rules from "../ruix.css" with { type: "css" };
-import {autocomplete} from "../ui.js";
+import {autocomplete, richTextEditor} from "../ui.js";
 document.adoptedStyleSheets = [rules];
 
 const model = state('Click me')
 const bookstore = state([])
 const search = state("")
 const options = state([])
+const edited = state("")
 const allOptions = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "December"]
 body(
     h1("RUIX demo"),
@@ -36,7 +37,10 @@ body(
         circle().cx(55).cy(55).r(40).fill('green')
     ),
     autocomplete(search, options),
-    {x:12,y:13}
+    {x:12,y:13},
+
+    richTextEditor(edited),
+    pre(edited)
 )
 
 search.observeChanges(s => options.set(allOptions.filter(m => m.startsWith(s))))

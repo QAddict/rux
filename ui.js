@@ -1,5 +1,5 @@
-import {state, transform, each, set} from "./mvc.js"
-import { div, input, ul, li } from "./html.js"
+import {isObservable, Observable,state, transform, each, set} from "./mvc.js"
+import { div, button, span, input, ul, li } from "./html.js"
 
 /**
  * Autocomplete input component.
@@ -83,4 +83,178 @@ export function autocomplete(model, options, labelFn = item => item) {
             .listStyle('none')
             .display(open)
     ).position("relative").display("inline-block")
+}
+
+
+
+// Rebuild a small formatting vocabulary; never attach unfiltered input HTML.
+function cleanHtml(html, doc) {
+    const source = doc.createElement('template')
+    source.innerHTML = html
+    const output = doc.createElement('div')
+    const allowed = new Set(['P', 'DIV', 'BR', 'B', 'STRONG', 'I', 'EM', 'U',
+        'S', 'STRIKE', 'H1', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'A'])
+    const discard = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED',
+        'SVG', 'MATH', 'TEMPLATE', 'FORM', 'INPUT', 'TEXTAREA', 'SELECT'])
+    function copy(node, parent) {
+        if (node.nodeType === 3) { parent.appendChild(doc.createTextNode(node.data)); return }
+        if (node.nodeType !== 1 || discard.has(node.tagName)) return
+        let target = parent
+        if (allowed.has(node.tagName)) {
+            target = doc.createElement(node.tagName.toLowerCase())
+            if (node.tagName === 'A') {
+                const href = safeUrl(node.getAttribute('href'), doc)
+                if (href) target.setAttribute('href', href)
+            }
+            parent.appendChild(target)
+        }
+        for (const child of node.childNodes) copy(child, target)
+    }
+    for (const child of source.content.childNodes) copy(child, output)
+    return output.innerHTML
+}
+
+function safeUrl(value, doc) {
+    if (typeof value !== 'string' || !value.trim()) return null
+    try {
+        const url = new URL(value.trim(), doc.baseURI)
+        return ['http:', 'https:', 'mailto:', 'tel:'].includes(url.protocol) ? url.href : null
+    } catch { return null }
+}
+
+/**
+ * Basic native rich-text editor backed by an Observable<string|null>.
+ * Returns an HtmlBuilder. Call dispose() when permanently discarding the editor.
+ * External model replacement resets the selection and may reset native undo history.
+ * Paste accepts plain text; model HTML is restricted to basic formatting tags.
+ */
+export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'} = {}) {
+    if (!isObservable(model)) throw new TypeError('richTextEditor: model must be an Observable')
+    if (model.set === Observable.prototype.set) throw new TypeError('richTextEditor: model must be writable')
+    const doc = document
+    const win = doc.defaultView
+    const editor = div().contenteditable(true).set('role', 'textbox')
+        .set('aria-label', label).set('aria-multiline', 'true')
+        .set('tabindex', '0').padding('12px').css('min-height', minHeight)
+        .css('overflow-wrap', 'anywhere').css('outline-offset', '-2px')
+    const area = editor.get()
+    const status = span().set('role', 'status').set('aria-live', 'polite')
+    const toolbar = div().set('role', 'group').set('aria-label', 'Text formatting')
+        .display('flex').css('flex-wrap', 'wrap').gap('4px').padding('8px')
+        .backgroundColor('#f5f5f5').borderBottom('1px solid #ddd')
+    const linkInput = input().type('url').set('aria-label', 'Link URL')
+        .placeholder('https://example.com').css('flex', '1')
+    const linkPanel = div().display(false).padding('8px').borderBottom('1px solid #ddd')
+    let savedRange = null
+    let writing = false
+    let disposed = false
+    let composing = false
+    let pendingHtml
+    const controls = []
+
+    function remember() {
+        const selection = win.getSelection()
+        if (selection.rangeCount && area.contains(selection.anchorNode) && area.contains(selection.focusNode)) {
+            savedRange = selection.getRangeAt(0).cloneRange()
+        }
+    }
+    function restore() {
+        area.focus()
+        const selection = win.getSelection()
+        const range = savedRange && area.contains(savedRange.startContainer) && area.contains(savedRange.endContainer)
+            ? savedRange : doc.createRange()
+        if (range !== savedRange) { range.selectNodeContents(area); range.collapse(false) }
+        selection.removeAllRanges()
+        selection.addRange(range)
+    }
+    function publish() {
+        if (disposed || composing) return
+        const html = cleanHtml(area.innerHTML, doc)
+        if (model.get() === html) return
+        writing = true
+        try { model.set(html) } finally { writing = false }
+    }
+    function reflect() {
+        remember()
+        const selection = win.getSelection()
+        if (!area.contains(selection.anchorNode) || !area.contains(selection.focusNode)) return
+        for (const [control, command] of controls) {
+            control.set('aria-pressed', String(doc.queryCommandState(command)))
+        }
+    }
+    function run(command, value = null) {
+        if (disposed) return
+        restore()
+        if (!doc.execCommand(command, false, value)) status.get().textContent = 'This action is not available for the current selection.'
+        else status.get().textContent = ''
+        remember()
+        publish()
+        reflect()
+    }
+    function tool(text, command, value = null, toggle = false) {
+        const control = button(text).type('button').set('aria-label', text)
+            .on('mousedown', (_el, e) => { remember(); e.preventDefault() }, false)
+            .onClick(() => run(command, value))
+        if (toggle) { control.set('aria-pressed', 'false'); controls.push([control, command]) }
+        if (typeof doc.execCommand !== 'function' || !doc.queryCommandSupported(command)) control.disabled(true)
+        return control
+    }
+    toolbar.add(
+        tool('Bold', 'bold', null, true),
+        tool('Italic', 'italic', null, true),
+        tool('Underline', 'underline', null, true),
+        tool('Paragraph', 'formatBlock', 'p'),
+        tool('Heading', 'formatBlock', 'h2'),
+        tool('Bullets', 'insertUnorderedList'),
+        tool('Numbered list', 'insertOrderedList'),
+        button('Link').type('button')
+            .on('mousedown', (_el, e) => { remember(); e.preventDefault() }, false)
+            .onClick(() => { linkPanel.display('flex'); linkInput.get().value = ''; linkInput.get().focus() }),
+        tool('Remove link', 'unlink'),
+        tool('Undo', 'undo'), tool('Redo', 'redo')
+    )
+    function closeLink() { linkPanel.display(false); restore() }
+    function applyLink() {
+        const href = safeUrl(linkInput.get().value, doc)
+        if (!href) { status.get().textContent = 'Enter an HTTP, HTTPS, mailto or tel link.'; return }
+        if (!savedRange || savedRange.collapsed) { status.get().textContent = 'Select the text to link first.'; return }
+        run('createLink', href)
+        linkPanel.display(false)
+    }
+    linkPanel.add(linkInput, button('Apply link').type('button').onClick(applyLink),
+        button('Cancel').type('button').onClick(closeLink))
+    linkInput.onKeyDown((_el, e) => {
+        if (e.key === 'Enter') { e.preventDefault(); applyLink() }
+        if (e.key === 'Escape') { e.preventDefault(); closeLink() }
+    })
+    editor.onInput(() => { publish(); reflect() })
+        .on('compositionstart', () => { composing = true }, false)
+        .on('compositionend', () => {
+            composing = false
+            if (pendingHtml !== undefined) { area.innerHTML = pendingHtml; pendingHtml = undefined; savedRange = null }
+            else publish()
+        }, false)
+        .on('paste', (_el, e) => {
+            e.preventDefault()
+            if (e.clipboardData) run('insertText', e.clipboardData.getData('text/plain'))
+        }, false)
+        .on('drop', (_el, e) => e.preventDefault(), false)
+        .on('click', (_el, e) => { if (e.target.closest('a')) e.preventDefault() }, false)
+    const root = div(toolbar, linkPanel, editor, div(status).padding('4px 12px'))
+        .class('rx-rich-text').border('1px solid #ccc').borderRadius('6px')
+    model.observe(value => {
+        if (disposed || writing) return
+        if (value != null && typeof value !== 'string') throw new TypeError('richTextEditor: model value must be a string or null')
+        const html = cleanHtml(value ?? '', doc)
+        if (composing) { pendingHtml = html; return }
+        if (area.innerHTML !== html) { area.innerHTML = html; savedRange = null }
+    })
+    doc.addEventListener('selectionchange', reflect)
+    root.dispose = () => {
+        disposed = true
+        doc.removeEventListener('selectionchange', reflect)
+        // Observable currently has no unsubscribe API; its retained callback becomes inert.
+        return root
+    }
+    return root
 }
