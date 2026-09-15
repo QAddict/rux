@@ -234,7 +234,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         .on('paste', (_el, e) => {
             if (e.clipboardData) run('insertText', e.clipboardData.getData('text/plain'))
         })
-        .onDrop(() => {})
+        .onDrop(() => {}, true)
         .onClick((_el, e) => { if (e.target.closest('a')) e.preventDefault() }, false)
     const root = div(toolbar, linkPanel, editor, div(status).padding('4px 12px'))
         .class('rx-rich-text').border('1px solid #ccc').borderRadius('6px')
