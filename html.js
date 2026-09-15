@@ -176,6 +176,14 @@ export class HtmlBuilder extends ElementBuilder {
         return this.set('aria-multiline', transform(value, to(true)))
     }
 
+    ariaLive(value) {
+        return this.set('aria-live', value)
+    }
+
+    ariaPressed(value = true) {
+        return this.set('aria-pressed', transform(value, to(true)))
+    }
+
     display(value) {
         return this.css('display', transform(value, v => v === false ? 'none' : v === true ? null : v))
     }
@@ -585,6 +593,10 @@ export class HtmlBuilder extends ElementBuilder {
         return this.on('load', handler, preventDefault)
     }
 
+    onPaste(handler, preventDefault = true) {
+        return this.on('paste', handler, preventDefault)
+    }
+
     onDragstart(handler, preventDefault = false) {
         return this.on('dragstart', handler, preventDefault)
     }
@@ -638,6 +650,14 @@ export class HtmlBuilder extends ElementBuilder {
 
     dropTo(target) {
         return this.receive(channelOf(target), item => target.update(addItemToArray(item)))
+    }
+
+    onCompositionStart(handler, preventDefault = false) {
+        return this.on('compositionstart', handler, preventDefault)
+    }
+
+    onCompositionEnd(handler, preventDefault = false) {
+        return this.on('compositionend', handler, preventDefault)
     }
 
     /*

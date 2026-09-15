@@ -137,7 +137,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
     const win = doc.defaultView
     const editor = div().contenteditable().role('textbox').ariaLabel(label).ariaMultiline().tabindex('0').padding('12px').minHeight(minHeight).overflowWrap('anywhere').outlineOffset('-2px')
     const area = editor.get()
-    const status = span().role('status').set('aria-live', 'polite')
+    const status = span().role('status').ariaLive('polite')
     const toolbar = div().role('group').ariaLabel('Text formatting').display('flex').flexWrap('wrap').gap('4px').padding('8px').backgroundColor('#f5f5f5').borderBottom('1px solid #ddd')
     const linkInput = input().type('url').ariaLabel('Link URL').placeholder('https://example.com').flex('1')
     const linkPanel = div().display(transform(linkPanelVisible, to("flex", false))).padding('8px').borderBottom('1px solid #ddd')
@@ -158,8 +158,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
     function restore() {
         editor.focus()
         const selection = win.getSelection()
-        const range = savedRange && area.contains(savedRange.startContainer) && area.contains(savedRange.endContainer)
-            ? savedRange : doc.createRange()
+        const range = savedRange && area.contains(savedRange.startContainer) && area.contains(savedRange.endContainer) ? savedRange : doc.createRange()
         if (range !== savedRange) { range.selectNodeContents(area); range.collapse(false) }
         selection.removeAllRanges()
         selection.addRange(range)
@@ -177,7 +176,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         const selection = win.getSelection()
         if (!area.contains(selection.anchorNode) || !area.contains(selection.focusNode)) return
         for (const [control, command] of controls) {
-            control.set('aria-pressed', String(doc.queryCommandState(command)))
+            control.ariaPressed(doc.queryCommandState(command))
         }
     }
     function run(command, value = null) {
@@ -189,10 +188,8 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         reflect()
     }
     function tool(text, command, value = null, toggle = false) {
-        const control = button(text).type('button').set('aria-label', text)
-            .onMouseDown(remember)
-            .onClick(() => run(command, value))
-        if (toggle) { control.set('aria-pressed', 'false'); controls.push([control, command]) }
+        const control = button(text).type('button').ariaLabel(text).onMouseDown(remember).onClick(() => run(command, value))
+        if (toggle) { control.ariaPressed(false); controls.push([control, command]) }
         if (typeof doc.execCommand !== 'function' || !doc.queryCommandSupported(command)) control.disabled(true)
         return control
     }
@@ -218,26 +215,24 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         run('createLink', href)
         linkPanelVisible.set(false)
     }
-    linkPanel.add(linkInput, button('Apply link').type('button').onClick(applyLink),
-        button('Cancel').type('button').onClick(closeLink))
+    linkPanel.add(linkInput, button('Apply link').type('button').onClick(applyLink), button('Cancel').type('button').onClick(closeLink))
     linkInput.onKeyDown((_el, e) => {
         if (e.key === 'Enter') { e.preventDefault(); applyLink() }
         if (e.key === 'Escape') { e.preventDefault(); closeLink() }
     })
     editor.onInput(() => { publish(); reflect() })
-        .on('compositionstart', () => { composing = true }, false)
-        .on('compositionend', () => {
+        .onCompositionStart(() => composing = true)
+        .onCompositionEnd(() => {
             composing = false
             if (pendingHtml !== undefined) { area.innerHTML = pendingHtml; pendingHtml = undefined; savedRange = null }
             else publish()
-        }, false)
-        .on('paste', (_el, e) => {
+        })
+        .onPaste((_el, e) => {
             if (e.clipboardData) run('insertText', e.clipboardData.getData('text/plain'))
         })
         .onDrop(() => {}, true)
         .onClick((_el, e) => { if (e.target.closest('a')) e.preventDefault() }, false)
-    const root = div(toolbar, linkPanel, editor, div(status).padding('4px 12px'))
-        .class('rx-rich-text').border('1px solid #ccc').borderRadius('6px')
+    const root = div(toolbar, linkPanel, editor, div(status).padding('4px 12px')).border('1px solid #ccc').borderRadius('6px')
     model.observe(value => {
         if (disposed || writing) return
         if (value != null && typeof value !== 'string') throw new TypeError('richTextEditor: model value must be a string or null')
