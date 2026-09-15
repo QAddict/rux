@@ -216,7 +216,6 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
             tool('•≡', 'insertUnorderedList'),
             tool('1≡', 'insertOrderedList'),
             button('\u{1F517}\uFE0E').type('button').onMouseDown(remember).onClick(() => { linkPanelVisible.set(true); linkValue.set('') }),
-            tool('Remove link', 'unlink'),
             tool('↶', 'undo'),
             tool('↷', 'redo')
         ).role('group').ariaLabel('Text formatting').display('flex').flexWrap('wrap').gap('4px').padding('8px').backgroundColor('#f5f5f5').borderBottom('1px solid #ddd'),
