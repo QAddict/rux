@@ -24,7 +24,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import {ElementBuilder, isObservable, transform, set, stateModel, to, addItemToArray, requireWriteable} from "./mvc.js";
+import {
+    ElementBuilder, isObservable, transform, set, stateModel, to, addItemToArray, requireWriteable,
+    requireObservable
+} from "./mvc.js";
 
 let modelChannels = new Map()
 
@@ -670,6 +673,11 @@ export class HtmlBuilder extends ElementBuilder {
         if (this.get().type === "radio")
             return this.checked(model.get() === this.get().value).onChange(() => this.get().checked && model.set(this.get().value))
         return this.value(model).onChange(() => model.set(this.get().value))
+    }
+
+    focusOn(observable) {
+        requireObservable(observable).observeChanges(() => this.get().focus())
+        return this
     }
 
     focus() {

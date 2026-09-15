@@ -36,6 +36,12 @@ export function requireFunction(value, message = "Value") {
     throw new Error(message + " must be function, but was " + value)
 }
 
+export function requireString(value, message = "Value") {
+    if(typeof value === 'string')
+        return value
+    throw new Error(message + " must be function, but was " + value)
+}
+
 /**
  * Represents an observable entity that allows triggering of registered listeners manually,
  * regardless of whether the underlying value has changed.
@@ -676,14 +682,14 @@ export class ElementBuilder extends FragmentBuilder {
      *
      * @param {string} name - The name of the property to set.
      * @param {...*} args - The arguments to pass to the property setter.
-     * @returns {ElementBuilder} - The current instance of ElementBuilder.
+     * @returns {this} - The current instance of ElementBuilder.
      */
     setProperty(name, ...args) {
         return this._manipulate(value => this.get()[name] = (value == null) ? null : value, args)
     }
 
     textContent(...args) {
-        return this.setProperty("textContent", args)
+        return this.setProperty("textContent", ...args)
     }
 
     /**
@@ -692,7 +698,7 @@ export class ElementBuilder extends FragmentBuilder {
      * @param {string} event - The event type to listen for.
      * @param {function} handler - The event handler function to be executed when the event is triggered.
      * @param {boolean} [preventDefault=true] - Indicates whether the event should bubble up through the DOM tree.
-     * @returns {ElementBuilder} - Returns the current instance of the ElementBuilder.
+     * @returns {this} - Returns the current instance of the ElementBuilder.
      */
     on(event, handler, preventDefault = true) {
         requireFunction(handler, event + " handler")
@@ -887,4 +893,23 @@ export function clear(content) {
 
 export function show(dialog) {
     return (typeof dialog === 'string') ? () => document.getElementById(dialog).showModal() : () => dialog.get().showModal()
+}
+
+export function delay(model, millis) {
+    const target = state(requireObservable(model).get())
+    model.observe(value => setTimeout(() => target.set(value), millis))
+    return target
+}
+
+export function delayChanges(model, millis) {
+    const target = state(requireObservable(model).get())
+    model.observeChanges(value => setTimeout(() => target.set(value), millis))
+    return target
+}
+
+export function filter(model, predicate = value => value) {
+    const target = state(requireObservable(model).get())
+    requireFunction(predicate, "predicate")
+    model.observe(value => predicate(value) && target.set(predicate(value)))
+    return target
 }

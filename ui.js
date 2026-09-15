@@ -1,4 +1,4 @@
-import {Observable, state, transform, each, set, requireWriteable, to} from "./mvc.js"
+import {Observable, state, transform, each, set, requireWriteable, to, filter, delay} from "./mvc.js"
 import { div, button, span, input, ul, li } from "./html.js"
 
 /**
@@ -133,19 +133,17 @@ function safeUrl(value, doc) {
 export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'} = {}) {
     requireWriteable(model)
     const linkPanelVisible = state(false)
+    const statusText = state('')
+    const linkValue = state('')
     const doc = document
     const win = doc.defaultView
     const editor = div().contenteditable().role('textbox').ariaLabel(label).ariaMultiline().tabindex('0').padding('12px').minHeight(minHeight).overflowWrap('anywhere').outlineOffset('-2px')
     const area = editor.get()
-    const status = span().role('status').ariaLive('polite')
-    const toolbar = div().role('group').ariaLabel('Text formatting').display('flex').flexWrap('wrap').gap('4px').padding('8px').backgroundColor('#f5f5f5').borderBottom('1px solid #ddd')
-    const linkInput = input().type('url').ariaLabel('Link URL').placeholder('https://example.com').flex('1')
-    const linkPanel = div().display(transform(linkPanelVisible, to("flex", false))).padding('8px').borderBottom('1px solid #ddd')
+    const status = span().role('status').ariaLive('polite').textContent(statusText)
     let savedRange = null
     let writing = false
     let disposed = false
-    let composing = false
-    let pendingHtml
+    let composing = state(false)
     const controls = []
 
     function remember() {
@@ -165,7 +163,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
     }
 
     function publish() {
-        if (disposed || composing) return
+        if (disposed || composing.get()) return
         const html = cleanHtml(area.innerHTML, doc)
         if (model.get() === html) return
         writing = true
@@ -175,71 +173,88 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         remember()
         const selection = win.getSelection()
         if (!area.contains(selection.anchorNode) || !area.contains(selection.focusNode)) return
-        for (const [control, command] of controls) {
-            control.ariaPressed(doc.queryCommandState(command))
+        for (const [pressed, command] of controls) {
+            pressed.set(doc.queryCommandState(command))
         }
     }
     function run(command, value = null) {
         if (disposed) return
         restore()
-        status.textContent(doc.execCommand(command, false, value) ? '' : 'This action is not available for the current selection.')
+        statusText.set(doc.execCommand(command, false, value) ? '' : 'This action is not available for the current selection.')
         remember()
         publish()
         reflect()
     }
     function tool(text, command, value = null, toggle = false) {
         const control = button(text).type('button').ariaLabel(text).onMouseDown(remember, true).onClick(() => run(command, value))
-        if (toggle) { control.ariaPressed(false); controls.push([control, command]) }
+        if (toggle) {
+            const pressed = state(false)
+            control.ariaPressed(pressed);
+            controls.push([pressed, command])
+        }
         if (typeof doc.execCommand !== 'function' || !doc.queryCommandSupported(command)) control.disabled(true)
         return control
     }
-    toolbar.add(
-        tool('B', 'bold', null, true).fontWeight('bold'),
-        tool('I', 'italic', null, true).fontStyle('italic'),
-        tool('U', 'underline', null, true).textDecoration('underline'),
-        tool('S', `strikeThrough`, null, true).textDecoration('line-through'),
-        tool('Paragraph', 'formatBlock', 'p'),
-        tool('Heading', 'formatBlock', 'h2'),
-        tool('•≡', 'insertUnorderedList'),
-        tool('1≡', 'insertOrderedList'),
-        button('\u{1F517}\uFE0E').type('button').onMouseDown(remember).onClick(() => { linkPanelVisible.set(true); linkInput.value('').focus() }),
-        tool('Remove link', 'unlink'),
-        tool('↶', 'undo'),
-        tool('↷', 'redo')
-    )
     function closeLink() { linkPanelVisible.set(false); restore() }
     function applyLink() {
-        const href = safeUrl(linkInput.get().value, doc)
-        if (!href) { status.get().textContent = 'Enter an HTTP, HTTPS, mailto or tel link.'; return }
-        if (!savedRange || savedRange.collapsed) { status.get().textContent = 'Select the text to link first.'; return }
+        const href = safeUrl(linkValue.get(), doc)
+        if (!href) { statusText.set('Enter an HTTP, HTTPS, mailto or tel link.'); return }
+        if (!savedRange || savedRange.collapsed) { statusText.set('Select the text to link first.'); return }
         run('createLink', href)
         linkPanelVisible.set(false)
     }
-    linkPanel.add(linkInput, button('Apply link').type('button').onClick(applyLink), button('Cancel').type('button').onClick(closeLink))
-    linkInput.onKeyDown((_el, e) => {
-        if (e.key === 'Enter') { e.preventDefault(); applyLink() }
-        if (e.key === 'Escape') { e.preventDefault(); closeLink() }
-    })
-    editor.onInput(() => { publish(); reflect() })
-        .onCompositionStart(() => composing = true)
+    editor
+        .onInput(() => { publish(); reflect() })
+        .onCompositionStart(set(composing, true))
         .onCompositionEnd(() => {
-            composing = false
-            if (pendingHtml !== undefined) { area.innerHTML = pendingHtml; pendingHtml = undefined; savedRange = null }
-            else publish()
+            composing.set(false)
+            publish()
         })
         .onPaste((_el, e) => {
             if (e.clipboardData) run('insertText', e.clipboardData.getData('text/plain'))
         })
         .onDrop(() => {}, true)
-        .onClick((_el, e) => { if (e.target.closest('a')) e.preventDefault() }, false)
-    const root = div(toolbar, linkPanel, editor, div(status).padding('4px 12px')).border('1px solid #ccc').borderRadius('6px')
-    model.observe(value => {
-        if (disposed || writing) return
-        if (value != null && typeof value !== 'string') throw new TypeError('richTextEditor: model value must be a string or null')
-        const html = cleanHtml(value ?? '', doc)
-        if (composing) { pendingHtml = html; return }
-        if (area.innerHTML !== html) { area.innerHTML = html; savedRange = null }
-    })
+        .onClick((_el, e) => e.target.closest('a') && e.preventDefault(), false)
+    const root = div(
+
+        // Toolbar
+        div(
+            tool('B', 'bold', null, true).fontWeight('bold'),
+            tool('I', 'italic', null, true).fontStyle('italic'),
+            tool('U', 'underline', null, true).textDecoration('underline'),
+            tool('S', `strikeThrough`, null, true).textDecoration('line-through'),
+            tool('Paragraph', 'formatBlock', 'p'),
+            tool('Heading', 'formatBlock', 'h2'),
+            tool('•≡', 'insertUnorderedList'),
+            tool('1≡', 'insertOrderedList'),
+            button('\u{1F517}\uFE0E').type('button').onMouseDown(remember).onClick(() => { linkPanelVisible.set(true); linkValue.set('') }),
+            tool('Remove link', 'unlink'),
+            tool('↶', 'undo'),
+            tool('↷', 'redo')
+        ).role('group').ariaLabel('Text formatting').display('flex').flexWrap('wrap').gap('4px').padding('8px').backgroundColor('#f5f5f5').borderBottom('1px solid #ddd'),
+
+        // Hidden link input
+        div(
+            input('link').value(linkValue).type('url').ariaLabel('Link URL').placeholder('https://example.com').flex('1')
+                .focusOn(delay(filter(linkPanelVisible), 10))
+                .onInput(e => linkValue.set(e.get().value))
+                .onKeyDown((_el, e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); applyLink() }
+                    if (e.key === 'Escape') { e.preventDefault(); closeLink() }
+                }),
+            button('Apply link').type('button').onClick(applyLink),
+            button('Cancel').type('button').onClick(closeLink)
+        ).display(transform(linkPanelVisible, to("flex", false))).padding('8px').borderBottom('1px solid #ddd'),
+
+        // Main editor pane
+        editor,
+
+
+        // Status text
+        div(status).padding('4px 12px')
+
+    ).border('1px solid #ccc').borderRadius('6px')
+
     doc.addEventListener('selectionchange', reflect)
     root.dispose = () => {
         disposed = true
