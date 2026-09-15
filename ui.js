@@ -203,18 +203,6 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         run('createLink', href)
         linkPanelVisible.set(false)
     }
-    editor
-        .onInput(() => { publish(); reflect() })
-        .onCompositionStart(set(composing, true))
-        .onCompositionEnd(() => {
-            composing.set(false)
-            publish()
-        })
-        .onPaste((_el, e) => {
-            if (e.clipboardData) run('insertText', e.clipboardData.getData('text/plain'))
-        })
-        .onDrop(() => {}, true)
-        .onClick((_el, e) => e.target.closest('a') && e.preventDefault(), false)
     const root = div(
 
         // Toolbar
@@ -247,8 +235,13 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         ).display(transform(linkPanelVisible, to("flex", false))).padding('8px').borderBottom('1px solid #ddd'),
 
         // Main editor pane
-        editor,
-
+        editor
+            .onInput(() => { publish(); reflect() })
+            .onCompositionStart(set(composing, true))
+            .onCompositionEnd(() => {composing.set(false); publish()})
+            .onPaste((_el, e) => e.clipboardData && run('insertText', e.clipboardData.getData('text/plain')))
+            .onDrop(() => {}, true)
+            .onClick((_el, e) => e.target.closest('a') && e.preventDefault(), false),
 
         // Status text
         div(status).padding('4px 12px')
