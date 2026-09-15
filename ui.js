@@ -1,4 +1,4 @@
-import { Observable, state, transform, each, set, requireWriteable} from "./mvc.js"
+import {Observable, state, transform, each, set, requireWriteable, to} from "./mvc.js"
 import { div, button, span, input, ul, li } from "./html.js"
 
 /**
@@ -55,6 +55,7 @@ export function autocomplete(model, options, labelFn = item => item) {
         active.set((active.get() + delta + list.length) % list.length)
     }
 
+    // Wrapper
     return div(
         // Input element
         input(model.getName()).value(model).placeholder("Type to search…").autocomplete("off")
@@ -74,28 +75,29 @@ export function autocomplete(model, options, labelFn = item => item) {
         // Options drop-down
         ul(each(
             options,
-            (item, index) => li(labelFn(item))
-                .cursor('pointer').padding('6px 10px').backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null))
-                .onClick(() => setModel(item.get()))
+
+            // Individual option
+            (item, index) => li(labelFn(item)).cursor('pointer').padding('6px 10px')
+                .backgroundColor(transform(active, i => i === index ? "#f0f4ff" : null))
+                .onMouseOver(set(active, index)).onMouseOut(set(active, -1)).onClick(() => setModel(item.get())),
         ))
-            .position('absolute').top('100%').left(0).right(0).margin('2px 0 0').padding(0).zIndex(999).maxHeight('10em').overflowY('auto')
+            .absolute().top('100%').left(0).right(0).margin('2px 0 0').padding(0).zIndex(999).maxHeight('10em').overflowY('auto')
             .boxShadow('0 4px 12px rgba(0,0,0,.12)').border('1px solid #ccc').borderRadius('3px').backgroundColor('white')
             .listStyle('none')
             .display(open)
-    ).position("relative").display("inline-block")
+    ).relative().display("inline-block")
 }
 
 
+const allowed = new Set(['P', 'DIV', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'H1', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'A'])
+const discard = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE', 'FORM', 'INPUT', 'TEXTAREA', 'SELECT'])
 
 // Rebuild a small formatting vocabulary; never attach unfiltered input HTML.
 function cleanHtml(html, doc) {
     const source = doc.createElement('template')
     source.innerHTML = html
     const output = doc.createElement('div')
-    const allowed = new Set(['P', 'DIV', 'BR', 'B', 'STRONG', 'I', 'EM', 'U',
-        'S', 'STRIKE', 'H1', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'A'])
-    const discard = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED',
-        'SVG', 'MATH', 'TEMPLATE', 'FORM', 'INPUT', 'TEXTAREA', 'SELECT'])
+
     function copy(node, parent) {
         if (node.nodeType === 3) { parent.appendChild(doc.createTextNode(node.data)); return }
         if (node.nodeType !== 1 || discard.has(node.tagName)) return
@@ -130,20 +132,15 @@ function safeUrl(value, doc) {
  */
 export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'} = {}) {
     requireWriteable(model)
+    const linkPanelVisible = state(false)
     const doc = document
     const win = doc.defaultView
-    const editor = div().contenteditable(true).role('textbox')
-        .set('aria-label', label).set('aria-multiline', 'true')
-        .tabindex('0').padding('12px').minHeight(minHeight)
-        .css('overflow-wrap', 'anywhere').css('outline-offset', '-2px')
+    const editor = div().contenteditable().role('textbox').ariaLabel(label).ariaMultiline().tabindex('0').padding('12px').minHeight(minHeight).overflowWrap('anywhere').outlineOffset('-2px')
     const area = editor.get()
     const status = span().role('status').set('aria-live', 'polite')
-    const toolbar = div().role('group').set('aria-label', 'Text formatting')
-        .display('flex').css('flex-wrap', 'wrap').gap('4px').padding('8px')
-        .backgroundColor('#f5f5f5').borderBottom('1px solid #ddd')
-    const linkInput = input().type('url').set('aria-label', 'Link URL')
-        .placeholder('https://example.com').flex('1')
-    const linkPanel = div().display(false).padding('8px').borderBottom('1px solid #ddd')
+    const toolbar = div().role('group').ariaLabel('Text formatting').display('flex').flexWrap('wrap').gap('4px').padding('8px').backgroundColor('#f5f5f5').borderBottom('1px solid #ddd')
+    const linkInput = input().type('url').ariaLabel('Link URL').placeholder('https://example.com').flex('1')
+    const linkPanel = div().display(transform(linkPanelVisible, to("flex", false))).padding('8px').borderBottom('1px solid #ddd')
     let savedRange = null
     let writing = false
     let disposed = false
@@ -159,7 +156,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
     }
 
     function restore() {
-        area.focus()
+        editor.focus()
         const selection = win.getSelection()
         const range = savedRange && area.contains(savedRange.startContainer) && area.contains(savedRange.endContainer)
             ? savedRange : doc.createRange()
@@ -186,41 +183,40 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
     function run(command, value = null) {
         if (disposed) return
         restore()
-        if (!doc.execCommand(command, false, value)) status.get().textContent = 'This action is not available for the current selection.'
-        else status.get().textContent = ''
+        status.textContent(doc.execCommand(command, false, value) ? '' : 'This action is not available for the current selection.')
         remember()
         publish()
         reflect()
     }
     function tool(text, command, value = null, toggle = false) {
         const control = button(text).type('button').set('aria-label', text)
-            .on('mousedown', (_el, e) => { remember(); e.preventDefault() }, false)
+            .onMouseDown(remember)
             .onClick(() => run(command, value))
         if (toggle) { control.set('aria-pressed', 'false'); controls.push([control, command]) }
         if (typeof doc.execCommand !== 'function' || !doc.queryCommandSupported(command)) control.disabled(true)
         return control
     }
     toolbar.add(
-        tool('Bold', 'bold', null, true),
-        tool('Italic', 'italic', null, true),
-        tool('Underline', 'underline', null, true),
+        tool('B', 'bold', null, true).fontWeight('bold'),
+        tool('I', 'italic', null, true).fontStyle('italic'),
+        tool('U', 'underline', null, true).textDecoration('underline'),
+        tool('S', `strikeThrough`, null, true).textDecoration('line-through'),
         tool('Paragraph', 'formatBlock', 'p'),
         tool('Heading', 'formatBlock', 'h2'),
-        tool('Bullets', 'insertUnorderedList'),
-        tool('Numbered list', 'insertOrderedList'),
-        button('Link').type('button')
-            .on('mousedown', (_el, e) => { remember(); e.preventDefault() }, false)
-            .onClick(() => { linkPanel.display('flex'); linkInput.get().value = ''; linkInput.get().focus() }),
+        tool('•≡', 'insertUnorderedList'),
+        tool('1≡', 'insertOrderedList'),
+        button('\u{1F517}\uFE0E').type('button').onMouseDown(remember).onClick(() => { linkPanelVisible.set(true); linkInput.value('').focus() }),
         tool('Remove link', 'unlink'),
-        tool('Undo', 'undo'), tool('Redo', 'redo')
+        tool('↶', 'undo'),
+        tool('↷', 'redo')
     )
-    function closeLink() { linkPanel.display(false); restore() }
+    function closeLink() { linkPanelVisible.set(false); restore() }
     function applyLink() {
         const href = safeUrl(linkInput.get().value, doc)
         if (!href) { status.get().textContent = 'Enter an HTTP, HTTPS, mailto or tel link.'; return }
         if (!savedRange || savedRange.collapsed) { status.get().textContent = 'Select the text to link first.'; return }
         run('createLink', href)
-        linkPanel.display(false)
+        linkPanelVisible.set(false)
     }
     linkPanel.add(linkInput, button('Apply link').type('button').onClick(applyLink),
         button('Cancel').type('button').onClick(closeLink))
@@ -236,11 +232,10 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
             else publish()
         }, false)
         .on('paste', (_el, e) => {
-            e.preventDefault()
             if (e.clipboardData) run('insertText', e.clipboardData.getData('text/plain'))
-        }, false)
-        .on('drop', (_el, e) => e.preventDefault(), false)
-        .on('click', (_el, e) => { if (e.target.closest('a')) e.preventDefault() }, false)
+        })
+        .onDrop(() => {})
+        .onClick((_el, e) => { if (e.target.closest('a')) e.preventDefault() }, false)
     const root = div(toolbar, linkPanel, editor, div(status).padding('4px 12px'))
         .class('rx-rich-text').border('1px solid #ccc').borderRadius('6px')
     model.observe(value => {

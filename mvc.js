@@ -682,6 +682,10 @@ export class ElementBuilder extends FragmentBuilder {
         return this._manipulate(value => this.get()[name] = (value == null) ? null : value, args)
     }
 
+    textContent(...args) {
+        return this.setProperty("textContent", args)
+    }
+
     /**
      * Attaches an event listener to the element.
      *

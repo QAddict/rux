@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import {ElementBuilder, isObservable, transform, set, stateModel, to, addItemToArray} from "./mvc.js";
+import {ElementBuilder, isObservable, transform, set, stateModel, to, addItemToArray, requireWriteable} from "./mvc.js";
 
 let modelChannels = new Map()
 
@@ -136,7 +136,7 @@ export class HtmlBuilder extends ElementBuilder {
         return this.set('selected', transform(value, to(true)))
     }
 
-    contenteditable(value) {
+    contenteditable(value = true) {
         return this.set('contenteditable', value)
     }
 
@@ -166,6 +166,14 @@ export class HtmlBuilder extends ElementBuilder {
 
     role(...args) {
         return this.set('role', ...args)
+    }
+
+    ariaLabel(...args) {
+        return this.set('aria-label', ...args)
+    }
+
+    ariaMultiline(value = true) {
+        return this.set('aria-multiline', transform(value, to(true)))
     }
 
     display(value) {
@@ -264,6 +272,18 @@ export class HtmlBuilder extends ElementBuilder {
         return this.css('font-weight', ...args)
     }
 
+    textDecoration(...args) {
+        return this.css('text-decoration', ...args)
+    }
+
+    overflowWrap(...args) {
+        return this.css('overflow-wrap', ...args)
+    }
+
+    outlineOffset(...args) {
+        return this.css('outline-offset', ...args)
+    }
+
     visibility(value) {
         return this.css('visibility', value)
     }
@@ -298,6 +318,14 @@ export class HtmlBuilder extends ElementBuilder {
 
     position(value) {
         return this.css('position', value)
+    }
+
+    absolute() {
+        return this.position('absolute')
+    }
+
+    relative() {
+        return this.position('relative')
     }
 
     float(value) {
@@ -428,6 +456,10 @@ export class HtmlBuilder extends ElementBuilder {
         return this.css('flex-grow', ...args)
     }
 
+    flexWrap(...args) {
+        return this.css('flex-wrap', ...args)
+    }
+
     alignItems(...args) {
         return this.css('align-items', ...args)
     }
@@ -476,6 +508,10 @@ export class HtmlBuilder extends ElementBuilder {
         return this.setProperty('checked', value)
     }
 
+    innerHTML(value) {
+        return this.setProperty('innerHTML', value)
+    }
+
     onClick(handler, preventDefault = true) {
         return this.on('click', handler, preventDefault)
     }
@@ -506,6 +542,23 @@ export class HtmlBuilder extends ElementBuilder {
 
     onMouseOut(handler, preventDefault = false) {
         return this.on('mouseout', handler, preventDefault)
+    }
+
+    trackOver(state) {
+        requireWriteable(state, "mouse over state")
+        return this.onMouseOver(set(state, true)).onMouseOut(set(state, false))
+    }
+
+    onMouseDown(handler, preventDefault = false) {
+        return this.on('mousedown', handler, preventDefault)
+    }
+
+    onMouseUp(handler, preventDefault = false) {
+        return this.on('mouseup', handler, preventDefault)
+    }
+
+    onMouseMove(handler, preventDefault = false) {
+        return this.on('mousemove', handler, preventDefault)
     }
 
     onKeyPress(handler, preventDefault = false) {
@@ -599,6 +652,10 @@ export class HtmlBuilder extends ElementBuilder {
         return this.value(model).onChange(() => model.set(this.get().value))
     }
 
+    focus() {
+        this.get().focus()
+        return this
+    }
 }
 
 /**
