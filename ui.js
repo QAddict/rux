@@ -188,7 +188,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         reflect()
     }
     function tool(text, command, value = null, toggle = false) {
-        const control = button(text).type('button').ariaLabel(text).onMouseDown(remember).onClick(() => run(command, value))
+        const control = button(text).type('button').ariaLabel(text).onMouseDown(remember, true).onClick(() => run(command, value))
         if (toggle) { control.ariaPressed(false); controls.push([control, command]) }
         if (typeof doc.execCommand !== 'function' || !doc.queryCommandSupported(command)) control.disabled(true)
         return control

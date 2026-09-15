@@ -181,7 +181,7 @@ export class HtmlBuilder extends ElementBuilder {
     }
 
     ariaPressed(value = true) {
-        return this.set('aria-pressed', transform(value, to(true)))
+        return this.set('aria-pressed', value)
     }
 
     display(value) {
