@@ -26,7 +26,7 @@
 
 import {
     ElementBuilder, isObservable, transform, set, stateModel, to, addItemToArray, requireWriteable,
-    requireObservable
+    requireObservable, requireFunction
 } from "./mvc.js";
 
 let modelChannels = new Map()
@@ -34,6 +34,13 @@ let modelChannels = new Map()
 function channelOf(model) {
     if(!modelChannels.has(model)) modelChannels.set(model, stateModel())
     return modelChannels.get(model)
+}
+
+export const key = {
+    ArrowDown: "ArrowDown",
+    ArrowUp: "ArrowUp",
+    Escape: "Escape",
+    Enter: "Enter",
 }
 
 /**
@@ -578,6 +585,20 @@ export class HtmlBuilder extends ElementBuilder {
 
     onKeyDown(handler, preventDefault = false) {
         return this.on('keydown', handler, preventDefault)
+    }
+
+    onKey(key, handler, preventDefault = false) {
+        requireFunction(handler, key + " handler")
+        if(!this.keyHandlers) {
+            this.keyHandlers = new Map()
+            this.on('keydown', (el, event) => this.keyHandlers.has(event.key) && this.keyHandlers.get(event.key)(el, event), false)
+        }
+        this.keyHandlers.set(key, preventDefault ? (el, e) => {
+            handler(el, e);
+            e.preventDefault();
+            return false
+        } : (el, e) => handler(el, e))
+        return this
     }
 
     onKeyUp(handler, preventDefault = false) {

@@ -1,5 +1,5 @@
 import {Observable, state, transform, each, set, requireWriteable, to, filter, delay} from "./mvc.js"
-import { div, button, span, input, ul, li } from "./html.js"
+import {div, button, span, input, ul, li, key} from "./html.js"
 
 /**
  * Autocomplete input component.
@@ -61,14 +61,10 @@ export function autocomplete(model, options, labelFn = item => item) {
         input(model.getName()).value(model).placeholder("Type to search…").autocomplete("off")
             .width('100%').borderBox().padding('4px 8px').border('1px solid #ccc').borderRadius("3px").font('inherit')
             .onInput(el => setModel(el.get().value, true))
-            .onKeyDown((el, e) => {
-                switch (e.key) {
-                    case "ArrowDown": moveActive(1); break
-                    case "ArrowUp":   moveActive(-1); break
-                    case "Enter":  setModel(options.get()[active.get()]); break
-                    case "Escape": setModel(null); break
-                }
-            })
+            .onKey(key.ArrowDown, () => moveActive(1))
+            .onKey(key.ArrowUp, () => moveActive(-1))
+            .onKey(key.Enter, () => setModel(options.get()[active.get()]))
+            .onKey(key.Escape, () => setModel(null))
             .onFocus(set(open, true))
             .onBlur(() => setTimeout(set(open, false), 150)),
 
@@ -224,10 +220,8 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
             input('link').value(linkValue).type('url').ariaLabel('Link URL').placeholder('https://example.com').flex('1')
                 .focusOn(delay(filter(linkPanelVisible), 10))
                 .onInput(e => linkValue.set(e.get().value))
-                .onKeyDown((_el, e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); applyLink() }
-                    if (e.key === 'Escape') { e.preventDefault(); closeLink() }
-                }),
+                .onKey(key.Enter, applyLink, true)
+                .onKey(key.Escape, closeLink, true),
             button('Apply link').type('button').onClick(applyLink),
             button('Cancel').type('button').onClick(closeLink)
         ).display(transform(linkPanelVisible, to("flex", false))).padding('8px').borderBottom('1px solid #ddd'),
