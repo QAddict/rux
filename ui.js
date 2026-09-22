@@ -139,7 +139,6 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
     const win = doc.defaultView
     const editor = div().contenteditable().role('textbox').ariaLabel(label).ariaMultiline().tabindex('0').padding('12px').minHeight(minHeight).overflowWrap('anywhere').outlineOffset('-2px')
     const area = editor.get()
-    const status = span().role('status').ariaLive('polite').textContent(statusText)
     let savedRange = null
     let writing = false
     let disposed = false
@@ -243,7 +242,7 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
             .onClick((_el, e) => e.target.closest('a') && e.preventDefault(), false),
 
         // Status text
-        div(status).padding('4px 12px')
+        div(span(statusText).role('status').ariaLive('polite')).padding('4px 12px')
 
     ).border('1px solid #ccc').borderRadius('6px')
 
