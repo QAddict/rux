@@ -314,15 +314,9 @@ export function pageControls(pageState, pageRequest, loading = stateModel(false)
         span(
             'Page: ',
             inputText('page').width(2, 'em').value(transform(pageState, v => v?.numberOfElements > 0 ? v?.number + 1 : 0)),
-            ' of ',
-            pageState.totalPages,
-            ' (rows ',
-            pageState.pageable.offset,
-            ' - ',
+            ' of ', pageState.totalPages, ' (rows ', pageState.pageable.offset, ' - ',
             transform(pageState, value => value?.pageable?.offset + value?.numberOfElements),
-            ' of ',
-            pageState.totalElements,
-            ')'
+            ' of ', pageState.totalElements, ')'
         ).class('current-page'),
         nav('next', set(pageRequest, transform(pageState.number, v => v + 1)), pageState.last, '>'),
         nav('last', set(pageRequest, transform(pageState.totalPages, v => v - 1)), pageState.last, '\u226B|'),
