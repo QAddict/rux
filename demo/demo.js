@@ -1,13 +1,16 @@
-import {body, br, button, h1, p, pre, table, tbody, td, th, tr} from "../html.js";
+import {body, br, button, captionTop, h1, p, pre, table, tbody, td, th, tr} from "../html.js";
 import {circle, line, rect, svg} from "../svg.js";
-import {each, set, state} from "../mvc.js";
+import {each, functionModel, set, state, uri} from "../mvc.js";
 import {bind, get} from "../io.js";
 import rules from "../ruix.css" with { type: "css" };
-import {autocomplete, dataGrid, richTextEditor} from "../ui.js";
+import {autocomplete, dataGrid, pageableGrid, position, richTextEditor, searchControls} from "../ui.js";
 document.adoptedStyleSheets = [rules];
 
 const model = state('Click me')
 const bookstore = state([])
+const filter = state("")
+const pages = state(null)
+const request = state({page: 0})
 const search = state("")
 const options = state([])
 const edited = state("")
@@ -41,7 +44,10 @@ body(
 
     richTextEditor(edited),
     pre(edited),
-    dataGrid(bookstore, ["author", "title", "ISBN"])
+    pageableGrid(request.page, pages, [position, "name"], row => row.id),
+    dataGrid(functionModel((data, filter) => data.filter(book => book.title.includes(filter)), bookstore, filter), ["author", "title"])
+        .add(captionTop(searchControls(filter)))
+
 )
 
 search.observeChanges(s => options.set(allOptions.filter(m => m.startsWith(s))))
@@ -49,5 +55,7 @@ search.observeChanges(s => options.set(allOptions.filter(m => m.startsWith(s))))
 const bookApi = get("./demo.json")
 
 bind(bookApi, bookstore)
+
+get(uri("page{page}.json", request), pages).observeUrl()
 
 bookApi.trigger()

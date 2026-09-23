@@ -1,0 +1,39 @@
+{
+  "content": [
+    {"id": 1, "name": "John Doe"},
+    {"id": 2, "name": "Anna Karenina"},
+    {"id": 3, "name": "Johny Wu"},
+    {"id": 4, "name": "Billy th Kid"},
+    {"id": 5, "name": "Antonin Panenka"},
+    {"id": 6, "name": "Maria Garcia"},
+    {"id": 7, "name": "James Smith"},
+    {"id": 8, "name": "Elena Petrova"},
+    {"id": 9, "name": "Carlos Mendez"},
+    {"id": 10, "name": "Sophie Laurent"}
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10,
+    "sort": {
+      "empty": true,
+      "sorted": false,
+      "unsorted": true
+    },
+    "offset": 0,
+    "paged": true,
+    "unpaged": false
+  },
+  "totalPages": 3,
+  "totalElements": 24,
+  "size": 10,
+  "number": 0,
+  "numberOfElements": 10,
+  "first": true,
+  "last": false,
+  "sort": {
+    "empty": true,
+    "sorted": false,
+    "unsorted": true
+  },
+  "empty": false
+}

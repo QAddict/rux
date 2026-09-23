@@ -772,6 +772,13 @@ export function dynamicFragment(start = text(), end = text()) {
     return new DynamicFragmentBuilder(start, end)
 }
 
+/**
+ *
+ * @param model
+ * @param {function(item, position)} itemDisplayFunction
+ * @param keyFunction
+ * @returns {FragmentBuilder}
+ */
 export function each(model, itemDisplayFunction = item => item, keyFunction = null) {
     let start = text()
     let end = text()
@@ -781,7 +788,7 @@ export function each(model, itemDisplayFunction = item => item, keyFunction = nu
 }
 
 function rList(itemDisplayFunction) {
-    return n => (n === null ? [] : Array.isArray(n) ? n : [n]).map((i, p) => itemDisplayFunction(state(i), p))
+    return n => (n == null ? [] : Array.isArray(n) ? n : [n]).map((i, p) => itemDisplayFunction(state(i), p))
 }
 
 function fullReplace(start, end, fragmentItemsFunction) {
@@ -797,7 +804,7 @@ function fullReplace(start, end, fragmentItemsFunction) {
 function reconcile(start, end, itemFunction, keyFunction) {
     let cache = new Map()
     return n => {
-        let v = (n === null ? [] : Array.isArray(n) ? n : [n])
+        let v = (n == null ? [] : Array.isArray(n) ? n : [n])
             .map((i, p) => {
                 let key = keyFunction(i)
                 if(cache.has(key)) {

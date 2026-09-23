@@ -1,0 +1,33 @@
+{
+  "content": [
+    {"id": 21, "name": "Ingrid Bergman"},
+    {"id": 22, "name": "Rafael Costa"},
+    {"id": 23, "name": "Nadia Volkov"},
+    {"id": 24, "name": "Kwame Asante"}
+  ],
+  "pageable": {
+    "pageNumber": 2,
+    "pageSize": 10,
+    "sort": {
+      "empty": true,
+      "sorted": false,
+      "unsorted": true
+    },
+    "offset": 20,
+    "paged": true,
+    "unpaged": false
+  },
+  "totalPages": 3,
+  "totalElements": 24,
+  "size": 10,
+  "number": 2,
+  "numberOfElements": 4,
+  "first": false,
+  "last": true,
+  "sort": {
+    "empty": true,
+    "sorted": false,
+    "unsorted": true
+  },
+  "empty": false
+}

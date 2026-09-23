@@ -1,5 +1,5 @@
-import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel} from "./mvc.js"
-import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr} from "./html.js"
+import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger} from "./mvc.js"
+import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr, captionBottom, a, form, inputText, submit, reset} from "./html.js"
 
 /**
  * Autocomplete input component.
@@ -37,8 +37,8 @@ import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr} 
  *       .onCommit(item => selected.set(item)))
  */
 export function autocomplete(model, options, labelFn = item => item) {
-    const open   = state(false)
-    const active = state(-1)
+    const open   = stateModel(false)
+    const active = stateModel(-1)
 
     // Re-render list whenever options change
     options.observe(set(active, -1))
@@ -128,9 +128,9 @@ function safeUrl(value, doc) {
  */
 export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'} = {}) {
     requireWriteable(model)
-    const linkPanelVisible = state(false)
-    const statusText = state('')
-    const linkValue = state('')
+    const linkPanelVisible = stateModel(false)
+    const statusText = stateModel('')
+    const linkValue = stateModel('')
     const doc = document
     const win = doc.defaultView
     const editor = div().contenteditable().role('textbox').ariaLabel(label).ariaMultiline().tabindex('0').padding('12px').minHeight(minHeight).overflowWrap('anywhere').outlineOffset('-2px')
@@ -253,14 +253,17 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
 export function dataGrid(data, columns, reconciliationKeyFunction = null) {
     data = stateModel(data)
     columns = stateModel(columns.map(detectColumn))
+    const visibleColumns = transform(columns, c => c.filter(i => !i.hidden))
+    const columnReconciliationFunction = column => column.id
+    const applyColumns = renderer => tr(each(visibleColumns, renderer, columnReconciliationFunction))
     return table(
         thead(
-            tr(each(columns, column => renderHeader(column.get()), column => column.id))
+            applyColumns(column => renderHeader(column.get()))
         ),
         tbody(
             each(
                 data,
-                (row, position) => tr(each(columns, column => renderCell(row, position, column.get()), column => column.id)),
+                (row, position) => applyColumns(column => renderCell(row, position, column.get())),
                 reconciliationKeyFunction
             )
         )
@@ -268,17 +271,19 @@ export function dataGrid(data, columns, reconciliationKeyFunction = null) {
 }
 
 function detectColumn(value) {
-    if(typeof value === 'string')
-        return simpleColumn(value)
-    return value
+    return typeof value === 'string' ? simpleColumn(value) : value;
 }
+
 function renderHeader(column, element = th()) {
     return element.add(column.header(element))
 }
+
 function renderCell(row, position, column, element = td()) {
     return element.add(column.cell(row, position, element))
 }
+
 let id = 1;
+
 export function simpleColumn(name) {
     return {
         id: id++,
@@ -286,4 +291,46 @@ export function simpleColumn(name) {
         header() { return name },
         cell(row) { return row[name] }
     }
+}
+
+export const position = {
+    id: 0,
+    header() { return "#" },
+    cell(row, position) { return position + 1 }
+}
+
+export function pageableGrid(request, data, columns, reconciliationKeyFunction = null) {
+    return dataGrid(data.content, columns, reconciliationKeyFunction).add(captionBottom(pageControls(data, request)).textLeft().nowrap())
+}
+
+function nav(which, action, boundaryModel, ...content) {
+    return a(...content).class(which + '-page').title('Go to ' + which + ' page').color(transform(boundaryModel, to('silver'))).onClick(when(transform(boundaryModel, negate), action))
+}
+
+export function pageControls(pageState, pageRequest, loading = stateModel(false)) {
+    return form(
+        nav('first', set(pageRequest, 0), pageState.first, '|\u226A'),
+        nav('previous', set(pageRequest, transform(pageState.number, v => v - 1)), pageState.first, '<'),
+        span(
+            'Page: ',
+            inputText('page').width(2, 'em').value(transform(pageState, v => v?.numberOfElements > 0 ? v?.number + 1 : 0)),
+            ' of ',
+            pageState.totalPages,
+            ' (rows ',
+            pageState.pageable.offset,
+            ' - ',
+            transform(pageState, value => value?.pageable?.offset + value?.numberOfElements),
+            ' of ',
+            pageState.totalElements,
+            ')'
+        ).class('current-page'),
+        nav('next', set(pageRequest, transform(pageState.number, v => v + 1)), pageState.last, '>'),
+        nav('last', set(pageRequest, transform(pageState.totalPages, v => v - 1)), pageState.last, '\u226B|'),
+        a().class('reload-page', transform(loading, to(' data-loading'))).add('\u21BB').title('Reload page').onClick(trigger(pageRequest)),
+    ).onSubmit((el, event) => pageRequest.set(parseInt(event.target.page.value) - 1)).flexRow().gap("0.3em").alignItems("center")
+}
+
+export function searchControls(query) {
+    return form(inputText('query').value(query).auto(), submit('🔍'), reset('⌫')).flexRow()
+        .onSubmit((el, event) => query.set(event.target.query.value)).onReset(set(query, ''))
 }

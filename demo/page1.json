@@ -1,0 +1,39 @@
+{
+  "content": [
+    {"id": 11, "name": "Liam O'Brien"},
+    {"id": 12, "name": "Yuki Tanaka"},
+    {"id": 13, "name": "Fatima Al-Hassan"},
+    {"id": 14, "name": "Henrik Larsson"},
+    {"id": 15, "name": "Priya Sharma"},
+    {"id": 16, "name": "Marco Rossi"},
+    {"id": 17, "name": "Amara Diallo"},
+    {"id": 18, "name": "Chen Wei"},
+    {"id": 19, "name": "Olivia Bennett"},
+    {"id": 20, "name": "Tomasz Kowalski"}
+  ],
+  "pageable": {
+    "pageNumber": 1,
+    "pageSize": 10,
+    "sort": {
+      "empty": true,
+      "sorted": false,
+      "unsorted": true
+    },
+    "offset": 10,
+    "paged": true,
+    "unpaged": false
+  },
+  "totalPages": 3,
+  "totalElements": 24,
+  "size": 10,
+  "number": 1,
+  "numberOfElements": 10,
+  "first": false,
+  "last": false,
+  "sort": {
+    "empty": true,
+    "sorted": false,
+    "unsorted": true
+  },
+  "empty": false
+}
