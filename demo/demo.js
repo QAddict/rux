@@ -3,7 +3,7 @@ import {circle, line, rect, svg} from "../svg.js";
 import {each, set, state} from "../mvc.js";
 import {bind, get} from "../io.js";
 import rules from "../ruix.css" with { type: "css" };
-import {autocomplete, richTextEditor} from "../ui.js";
+import {autocomplete, dataGrid, richTextEditor} from "../ui.js";
 document.adoptedStyleSheets = [rules];
 
 const model = state('Click me')
@@ -40,7 +40,8 @@ body(
     {x:12,y:13},
 
     richTextEditor(edited),
-    pre(edited)
+    pre(edited),
+    dataGrid(bookstore, ["author", "title", "ISBN"])
 )
 
 search.observeChanges(s => options.set(allOptions.filter(m => m.startsWith(s))))

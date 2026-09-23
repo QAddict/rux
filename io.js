@@ -45,7 +45,7 @@ export class Get extends Remote {
         fetch(this.url.get(), { headers: this.headers.get(), credentials: "include" })
             .then(r => r.ok ? r.json() : Promise.reject(r))
             .then(data => { this.output.set(data); this.loading.set(false) })
-            .catch(err => { this.error.set(err);   this.loading.set(false) })
+            .catch(err => { console.error(err); this.error.set(err);   this.loading.set(false) })
     }
 }
 

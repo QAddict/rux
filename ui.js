@@ -1,5 +1,5 @@
-import {Observable, state, transform, each, set, requireWriteable, to, filter, delay} from "./mvc.js"
-import {div, button, span, input, ul, li, key} from "./html.js"
+import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel} from "./mvc.js"
+import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr} from "./html.js"
 
 /**
  * Autocomplete input component.
@@ -248,4 +248,42 @@ export function richTextEditor(model, {label = 'Rich text', minHeight = '12rem'}
         return root
     }
     return root
+}
+
+export function dataGrid(data, columns, reconciliationKeyFunction = null) {
+    data = stateModel(data)
+    columns = stateModel(columns.map(detectColumn))
+    return table(
+        thead(
+            tr(each(columns, column => renderHeader(column.get()), column => column.id))
+        ),
+        tbody(
+            each(
+                data,
+                (row, position) => tr(each(columns, column => renderCell(row, position, column.get()), column => column.id)),
+                reconciliationKeyFunction
+            )
+        )
+    )
+}
+
+function detectColumn(value) {
+    if(typeof value === 'string')
+        return simpleColumn(value)
+    return value
+}
+function renderHeader(column, element = th()) {
+    return element.add(column.header(element))
+}
+function renderCell(row, position, column, element = td()) {
+    return element.add(column.cell(row, position, element))
+}
+let id = 1;
+export function simpleColumn(name) {
+    return {
+        id: id++,
+        hidden: false,
+        header() { return name },
+        cell(row) { return row[name] }
+    }
 }
