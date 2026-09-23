@@ -135,7 +135,8 @@ export class Observable extends Triggerable {
      * @returns {Observable} this observable.
      */
     update(aFunction) {
-        return this.set(aFunction(this.get()))
+        aFunction(this.get())
+        return this.trigger()
     }
 }
 
@@ -900,6 +901,10 @@ export function clear(content) {
 
 export function show(dialog) {
     return (typeof dialog === 'string') ? () => document.getElementById(dialog).showModal() : () => dialog.get().showModal()
+}
+
+export function moveWithin(from, to) {
+    return value => value.splice(to, 0, ...value.splice(from, 1))
 }
 
 export function delay(model, millis) {

@@ -1,4 +1,7 @@
-import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger} from "./mvc.js"
+import {
+    Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger,
+    moveWithin
+} from "./mvc.js"
 import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr, captionBottom, a, form, inputText, submit, reset} from "./html.js"
 
 /**
@@ -256,9 +259,11 @@ export function dataGrid(data, columns, reconciliationKeyFunction = null) {
     const visibleColumns = transform(columns, c => c.filter(i => !i.hidden))
     const columnReconciliationFunction = column => column.id
     const applyColumns = renderer => tr(each(visibleColumns, renderer, columnReconciliationFunction))
+    const columnMove = state()
     return table(
         thead(
-            applyColumns(column => renderHeader(column.get()))
+            applyColumns((column, index) => renderHeader(column.get()).transfer(columnMove, index)
+                .receive(columnMove, from => columns.update(moveWithin(from, index)), 'receiver', 'drop'))
         ),
         tbody(
             each(
