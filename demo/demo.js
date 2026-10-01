@@ -45,8 +45,8 @@ body(
     richTextEditor(edited),
     pre(edited),
     pageableGrid(request.page, pages, [position, "name"], row => row.id),
-    dataGrid(functionModel((data, filter) => data.filter(book => book.title.includes(filter)), bookstore, filter), ["author", "title"])
-        .add(captionTop(searchControls(filter)))
+    dataGrid(functionModel((data, filter) => data.filter(book => book.title.includes(filter)), bookstore, filter), [position, "ISBN", "author", "title"])
+        .addFirst(captionTop(searchControls(filter)))
 
 )
 

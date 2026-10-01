@@ -25,20 +25,17 @@
  */
 
 export function requireNonNull(value, message = "Value must not be null") {
-    if (value == null)
-        throw new Error(message)
+    if (value == null) throw new Error(message)
     return value
 }
 
 export function requireFunction(value, message = "Value") {
-    if(typeof value === 'function')
-        return value
+    if(typeof value === 'function') return value
     throw new Error(message + " must be function, but was " + value)
 }
 
 export function requireString(value, message = "Value") {
-    if(typeof value === 'string')
-        return value
+    if(typeof value === 'string') return value
     throw new Error(message + " must be function, but was " + value)
 }
 
@@ -571,6 +568,13 @@ export class FragmentBuilder extends Content {
         return this
     }
 
+    addFirst(...args) {
+        allArgsOf(args).forEach(arg => this.get().firstChild
+            ? this.get().insertBefore(node(arg), this.get().firstChild)
+            : this.get().appendChild(node(arg)))
+        return this
+    }
+
     /**
      * Clears all child elements from the current node.
      *
@@ -924,4 +928,9 @@ export function filter(model, predicate = value => value) {
     requireFunction(predicate, "predicate")
     model.observe(value => predicate(value) && target.set(predicate(value)))
     return target
+}
+
+export function ignoreSameValue(model, observer) {
+    let v = model.get()
+    return value => v !== value && observer(v = value)
 }

@@ -1,8 +1,5 @@
-import {
-    Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger,
-    moveWithin
-} from "./mvc.js"
-import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr, captionBottom, a, form, inputText, submit, reset} from "./html.js"
+import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger, moveWithin, toggle, ignoreSameValue} from "./mvc.js"
+import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr, captionBottom, a, form, inputText, submit, reset, captionTop} from "./html.js"
 
 /**
  * Autocomplete input component.
@@ -260,7 +257,20 @@ export function dataGrid(data, columns, reconciliationKeyFunction = null) {
     const columnReconciliationFunction = column => column.id
     const applyColumns = renderer => tr(each(visibleColumns, renderer, columnReconciliationFunction))
     const columnMove = state()
+    const columnSelector = stateModel(false)
     return table(
+        captionTop(
+            div(
+                div(
+                    each(columns, column => renderHeader(column.get(), div(transform(column.hidden, to('☐ ', '☑ '))))
+                        .color(transform(column.hidden, to('silver')))
+                        .padding('2px')
+                        .class(transform(column.hidden.observe(ignoreSameValue(column.hidden, trigger(columns))), to('hidden', 'visible')))
+                        .onClick(toggle(column.hidden)), column => column.id)
+                ).display(columnSelector).border('1px solid silver').boxShadow('2px 2px 2px silver').textLeft().backgroundColor('white').position('absolute').right('0').textLeft().paddingRight('1em'),
+                div(transform(columnSelector, to('×', '≡'))).margin('1px').position('absolute').right('0').paddingLeft('0.25em').paddingRight('0.25em').backgroundColor('#EEE').onClick(toggle(columnSelector))
+            ).position('relative')
+        ),
         thead(
             applyColumns((column, index) => renderHeader(column.get()).transfer(columnMove, index)
                 .receive(columnMove, from => columns.update(moveWithin(from, index)), 'receiver', 'drop'))
