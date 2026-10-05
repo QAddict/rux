@@ -1,4 +1,4 @@
-import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger, moveWithin, toggle, ignoreSameValue} from "./mvc.js"
+import {Observable, state, transform, each, set, requireWriteable, to, filter, delay, stateModel, when, negate, trigger, moveWithin, toggle, ignoreSameValue, rotatingIncrement} from "./mvc.js"
 import {div, button, span, input, ul, li, key, table, thead, tbody, th, td, tr, captionBottom, a, form, inputText, submit, reset, captionTop} from "./html.js"
 
 /**
@@ -269,7 +269,7 @@ export function dataGrid(data, columns, reconciliationKeyFunction = null) {
                         .onClick(toggle(column.hidden)), column => column.id)
                 ).display(columnSelector).border('1px solid silver').boxShadow('2px 2px 2px silver').textLeft().backgroundColor('white').position('absolute').right('0').textLeft().paddingRight('1em'),
                 div(transform(columnSelector, to('×', '≡'))).margin('1px').position('absolute').right('0').paddingLeft('0.25em').paddingRight('0.25em').backgroundColor('#EEE').onClick(toggle(columnSelector))
-            ).position('relative')
+            ).position('relative').marginRight('-1em')
         ),
         thead(
             applyColumns((column, index) => renderHeader(column.get()).transfer(columnMove, index)
@@ -286,7 +286,7 @@ export function dataGrid(data, columns, reconciliationKeyFunction = null) {
 }
 
 function detectColumn(value) {
-    return typeof value === 'string' ? simpleColumn(value) : value;
+    return typeof value === 'string' ? column(value) : value;
 }
 
 function renderHeader(column, element = th()) {
@@ -299,19 +299,24 @@ function renderCell(row, position, column, element = td()) {
 
 let id = 1;
 
-export function simpleColumn(name) {
+export function column(name, def = {}) {
     return {
         id: id++,
-        hidden: false,
-        header() { return name },
-        cell(row) { return row[name] }
+        name: name,
+        header() { return this.name },
+        cell(row) { return row[name] },
+        ...def
     }
 }
 
-export const position = {
-    id: 0,
-    header() { return "#" },
-    cell(row, position) { return position + 1 }
+export const position = column('#', { cell(row, position) { return position + 1 } })
+
+export function sorting(model, values = [null, 'asc', 'desc']) {
+    const active = stateModel(0).observeChanges(v => model.set(values[v]))
+    return function() {
+        return a(span(this.name).auto(), span(transform(active, v => [' ', '▼', '▲'][v])))
+            .title('Sort by ', this.name).onClick(rotatingIncrement(active, values.length)).flexRow()
+    }
 }
 
 export function pageableGrid(request, data, columns, reconciliationKeyFunction = null) {

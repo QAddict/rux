@@ -894,6 +894,24 @@ export function decrement(model, by = 1) {
     return increment(model, -by)
 }
 
+export function rotatingIncrement(model, max) {
+    return isObservable(max)
+        ? () => model.set((model.get() + 1) % max.get())
+        : () => model.set((model.get() + 1) % max)
+}
+
+export function rotatingDecrement(model, max) {
+    return isObservable(max)
+        ? () => model.set((model.get() + max.get() - 1) % max.get())
+        : () => model.set((model.get() + max - 1) % max)
+}
+
+export function setNextRotating(model, active, values) {
+    return isObservable(values)
+        ? () => active.set((active.get() + 1) % values.get().length)
+        : () => active.set((active.get() + 1) % values.length)
+}
+
 /*export function invert(model) {    return () => model.set(-model.get())}*/
 export function remove(content) {
     return () => content.remove()

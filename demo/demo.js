@@ -3,7 +3,7 @@ import {circle, line, rect, svg} from "../svg.js";
 import {each, functionModel, set, state, uri} from "../mvc.js";
 import {bind, get} from "../io.js";
 import rules from "../ruix.css" with { type: "css" };
-import {autocomplete, dataGrid, pageableGrid, position, richTextEditor, searchControls} from "../ui.js";
+import {autocomplete, column, dataGrid, pageableGrid, position, richTextEditor, searchControls, sorting} from "../ui.js";
 document.adoptedStyleSheets = [rules];
 
 const model = state('Click me')
@@ -15,6 +15,7 @@ const search = state("")
 const options = state([])
 const edited = state("")
 const allOptions = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "December"]
+const sort = state(0).observeChanges(v => bookstore.update(b => v!==0 && b.sort((a, b) => a.author > b.author ? v : -v)))
 body(
     h1("RUIX demo"),
     p("Hello world!"),
@@ -45,7 +46,7 @@ body(
     richTextEditor(edited),
     pre(edited),
     pageableGrid(request.page, pages, [position, "name"], row => row.id),
-    dataGrid(functionModel((data, filter) => data.filter(book => book.title.includes(filter)), bookstore, filter), [position, "ISBN", "author", "title"])
+    dataGrid(functionModel((data, filter) => data.filter(book => book.title.includes(filter)), bookstore, filter), [position, "ISBN", column("author", {header: sorting(sort, [0, 1, -1])}), "title"])
         .addFirst(captionTop(searchControls(filter)))
 
 )
